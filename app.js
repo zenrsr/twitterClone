@@ -10,18 +10,20 @@ const app = express();
 app.use(express.json());
 let db;
 
-const initialize = async () => {
+const startServer = async () => {
   try {
     db = await open({ filename: dbPath, driver: sqlite3.Database });
-    app.listen(3000, () => {
-      console.log("Server running at http://localhost:3000/");
+    app.listen(3010, () => {
+      console.log("Server running at http://localhost:3010/");
     });
   } catch (e) {
     console.log(`${e.message}`);
   }
 };
-initialize();
+// noinspection JSIgnoredPromiseFromCall
+startServer();
 
+// Middleware function for Authentication.
 const authenticateToken = (request, response, next) => {
   let jwtToken;
   const authHeader = request.headers["authorization"];
@@ -41,7 +43,7 @@ const authenticateToken = (request, response, next) => {
   }
 };
 
-// APi 1
+// API 1
 app.post("/register/", async (request, response) => {
   try {
     const { username, password, name, gender } = request.body;
@@ -62,7 +64,7 @@ app.post("/register/", async (request, response) => {
                 name = '${name}',
                 gender = '${gender}'
             );`;
-      const x = await db.run(getQuery);
+      await db.run(getQuery);
       response.status(200);
       response.send("User created successfully");
     }
@@ -73,9 +75,12 @@ app.post("/register/", async (request, response) => {
 
 // API 2
 app.post("/login/", async (request, response) => {
+  let match;
   try {
-    const { username, password } = request.body;
-    const userQuery = `SELECT * FROM user WHERE username ='${username}';`;
+    const {username, password} = request.body;
+    const userQuery = `SELECT *
+                       FROM user
+                       WHERE username = '${username}';`;
     const dbUser = await db.get(userQuery);
     if (dbUser === undefined) {
       response.status(400);
@@ -86,9 +91,9 @@ app.post("/login/", async (request, response) => {
         response.status(400);
         response.send("Invalid password");
       } else {
-        const payload = { username: username };
+        const payload = {username: username};
         const jwtToken = await jwt.sign(payload, "x_clone");
-        response.send({ jwtToken });
+        response.send({jwtToken});
       }
     }
   } catch (e) {
